@@ -22,7 +22,8 @@ setuptools.setup(
             'aptbot=aptbot.__main__:main',
         ],
     },
+    install_requires=[
+        'dotenv',
+    ],
     python_requires=">=3.7",
 )
-
-

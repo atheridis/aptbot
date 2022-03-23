@@ -200,6 +200,7 @@ def update(s: socket.socket):
 
 def main():
     argsv = aptbot.args.parse_arguments()
+    os.makedirs(CONFIG_PATH, exist_ok=True)
     if argsv.enable:
         listener()
 
