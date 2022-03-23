@@ -15,6 +15,13 @@ def parse_arguments() -> argparse.Namespace:
     )
 
     arg_parser.add_argument(
+        "-d",
+        "--disable-account",
+        type=str,
+        help=f"Disable an account from the bot"
+    )
+
+    arg_parser.add_argument(
         "-s",
         "--send-message",
         type=str,

@@ -1,8 +1,7 @@
 import socket
 import time
-import sys
 from enum import Enum
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
 
@@ -23,17 +22,17 @@ class Commands(Enum):
 
 @dataclass
 class Message:
-    tags: dict[str, str]
-    nick: str
-    command: Optional[Commands]
-    channel: str
-    value: str
+    tags: dict[str, str] = field(default_factory=dict)
+    nick: str = ""
+    command: Optional[Commands] = None
+    channel: str = ""
+    value: str = ""
 
 
 class Bot:
     def __init__(self, nick: str, oauth_token: str, client_id: str):
         self.irc = socket.socket()
-        self.server = "irc.twitch.tv"
+        self.server = "irc.chat.twitch.tv"
         self.port = 6667
         self.nick = nick
         self.oauth_token = oauth_token
@@ -41,11 +40,13 @@ class Bot:
         self.connected_channels = []
 
     def send_command(self, command: str):
-        print(f"< {command}")
+        if "PASS" not in command:
+            print(f"< {command}")
         self.irc.send((command + "\r\n").encode())
 
     def connect(self):
         self.irc.connect((self.server, self.port))
+        time.sleep(3)
         self.send_command(f"PASS oauth:{self.oauth_token}")
         self.send_command(f"NICK {self.nick}")
         self.send_command(f"CAP REQ :twitch.tv/membership")
@@ -65,11 +66,12 @@ class Bot:
         self.connected_channels.remove(channel)
 
     def send_privmsg(self, channel: str, text: str):
+        print(f"#{channel} ({Commands.PRIVMSG.value}) | {self.nick}: {text}")
         self.send_command(f"{Commands.PRIVMSG.value} #{channel} :{text}")
 
     @staticmethod
     def parse_message(received_msg: str) -> Message:
-        message = Message({}, "", None, "", "")
+        message = Message()
 
         value_start = received_msg.find(
             ':',
@@ -105,33 +107,34 @@ class Bot:
     def _handle_message(self, received_msg: str) -> Message:
         if received_msg == "PING :tmi.twitch.tv":
             self.send_command("PONG :tmi.twitch.tv")
-            return Message({}, "", None, "", "")
+            return Message()
         elif not received_msg:
-            return Message({}, "", None, "", "")
+            return Message()
         return Bot.parse_message(received_msg)
 
     def receive_messages(self) -> list[Message]:
         messages = []
-        i = 0
-        while i < 5:
-            if i:
-                try:
-                    self.connect()
-                    self.join_channels(self.connected_channels)
-                except OSError as e:
-                    print(f"Connection failed {e}")
-            try:
-                received_msgs = self.irc.recv(2048).decode()
-            except ConnectionResetError as e:
-                print(f"There was an error connecting with error {e}")
-                print("Trying to connect again")
-                time.sleep(2**i+1)
-                i += 1
-            else:
-                print("broke")
-                break
-        else:
-            sys.exit(1)
+        # i = 0
+        # while i < 5:
+        #     if i:
+        #         try:
+        #             self.connect()
+        #             self.join_channels(self.connected_channels)
+        #         except OSError as e:
+        #             print(f"Connection failed {e}")
+        #     try:
+        #         received_msgs = self.irc.recv(2048).decode()
+        #     except ConnectionResetError as e:
+        #         print(f"There was an error connecting with error {e}")
+        #         print("Trying to connect again")
+        #         time.sleep(2**i+1)
+        #         i += 1
+        #     else:
+        #         print("broke")
+        #         break
+        # else:
+        #     sys.exit(1)
+        received_msgs = self.irc.recv(2048).decode()
         for received_msgs in received_msgs.split("\r\n"):
             messages.append(self._handle_message(received_msgs))
         return messages
