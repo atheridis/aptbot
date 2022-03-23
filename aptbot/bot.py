@@ -23,7 +23,7 @@ class Commands(Enum):
 
 @dataclass
 class Message:
-    tags: dict
+    tags: dict[str, str]
     nick: str
     command: Optional[Commands]
     channel: str
@@ -114,16 +114,21 @@ class Bot:
         messages = []
         i = 0
         while i < 5:
+            if i:
+                try:
+                    self.connect()
+                    self.join_channels(self.connected_channels)
+                except OSError as e:
+                    print(f"Connection failed {e}")
             try:
                 received_msgs = self.irc.recv(2048).decode()
             except ConnectionResetError as e:
                 print(f"There was an error connecting with error {e}")
                 print("Trying to connect again")
-                time.sleep(2**i)
-                self.connect()
-                self.join_channels(self.connected_channels)
+                time.sleep(2**i+1)
                 i += 1
             else:
+                print("broke")
                 break
         else:
             sys.exit(1)

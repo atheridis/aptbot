@@ -6,8 +6,10 @@ import os
 import sys
 import importlib
 import importlib.util
+import traceback
 from threading import Thread
 from dotenv import load_dotenv
+from types import ModuleType
 
 
 if "XDG_CONFIG_HOME" in os.environ:
@@ -26,27 +28,50 @@ PORT = 26538
 LOCALHOST = "127.0.0.1"
 
 
-def loop(bot: aptbot.bot.Bot):
+def loop(bot: aptbot.bot.Bot, modules: dict[str, ModuleType]):
+    update_modules(modules)
     while True:
         messages = bot.receive_messages()
         for message in messages:
             if message.channel:
-                account_path = os.path.join(CONFIG_PATH, f"{message.channel}")
-                module_path = os.path.join(
-                    account_path, f"message_interpreter.py")
-                spec = importlib.util.spec_from_file_location(
-                    "message_interpreter",
-                    module_path,
+                method = Thread(
+                    target=modules[message.channel].main,
+                    args=(bot, message, )
                 )
-                if spec and spec.loader:
-                    foo = importlib.util.module_from_spec(spec)
-                    spec.loader.exec_module(foo)
-                    method = Thread(target=foo.main, args=(bot, message, ))
-                    method.daemon = True
-                    method.start()
-                    # foo.main(bot, message)
+                method.daemon = True
+                method.start()
                 print(message)
         time.sleep(0.001)
+
+
+def update_modules(modules: dict[str, ModuleType]):
+    modules.clear()
+    # modules = {}
+    channels = os.listdir(CONFIG_PATH)
+    for channel in channels:
+        account_path = os.path.join(CONFIG_PATH, f"{channel}")
+        module_path = os.path.join(
+            account_path, f"message_interpreter.py")
+        spec = importlib.util.spec_from_file_location(
+            "message_interpreter",
+            module_path,
+        )
+        account_path = os.path.join(CONFIG_PATH, f"{channel}")
+        module_path = os.path.join(
+            account_path, f"message_interpreter.py")
+        spec = importlib.util.spec_from_file_location(
+            "message_interpreter",
+            module_path,
+        )
+        if spec and spec.loader:
+            foo = importlib.util.module_from_spec(spec)
+            try:
+                spec.loader.exec_module(foo)
+            except Exception as e:
+                print(traceback.format_exc())
+                print(f"Problem Loading Module: {e}")
+            else:
+                modules[channel] = foo
 
 
 def initialize(bot: aptbot.bot.Bot):
@@ -64,7 +89,8 @@ def listener():
     else:
         sys.exit(1)
     bot.connect()
-    message_loop = Thread(target=loop, args=(bot,))
+    modules = {}
+    message_loop = Thread(target=loop, args=(bot, modules, ))
     message_loop.daemon = True
     message_loop.start()
     s = socket.socket()
@@ -89,6 +115,9 @@ def listener():
                 bot.send_privmsg(channel, msg)
             elif "KILL" in command:
                 sys.exit()
+            elif "UPDATE" in command:
+                update_modules(modules)
+
         time.sleep(1)
 
 
@@ -132,6 +161,13 @@ def disable(s: socket.socket):
     s.send(bytes(f"{command}==={channel}==={msg}", "utf-8"))
 
 
+def update(s: socket.socket):
+    command = "UPDATE"
+    channel = ""
+    msg = ""
+    s.send(bytes(f"{command}==={channel}==={msg}", "utf-8"))
+
+
 def main():
     argsv = aptbot.args.parse_arguments()
     if argsv.enable:
@@ -146,6 +182,8 @@ def main():
         send_msg(s, argsv.send_message)
     if argsv.disable:
         disable(s)
+    if argsv.update:
+        update(s)
     s.close()
 
 

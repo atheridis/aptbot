@@ -35,4 +35,11 @@ def parse_arguments() -> argparse.Namespace:
         help=f"Disable the bot"
     )
 
+    arg_parser.add_argument(
+        "--update",
+        default=False,
+        action="store_true",
+        help=f"Update the bot"
+    )
+
     return arg_parser.parse_args()
