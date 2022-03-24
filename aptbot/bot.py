@@ -2,7 +2,7 @@ import socket
 import time
 from enum import Enum
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, Union
 
 
 class Commands(Enum):
@@ -31,31 +31,31 @@ class Message:
 
 class Bot:
     def __init__(self, nick: str, oauth_token: str, client_id: str):
-        self.irc = socket.socket()
-        self.server = "irc.chat.twitch.tv"
-        self.port = 6667
-        self.nick = nick
-        self.oauth_token = oauth_token
-        self.client_id = client_id
-        self.connected_channels = []
+        self._irc = socket.socket()
+        self._server = "irc.chat.twitch.tv"
+        self._port = 6667
+        self._nick = nick
+        self._oauth_token = oauth_token
+        self._client_id = client_id
+        self._connected_channels = []
 
     def send_command(self, command: str):
         if "PASS" not in command:
             print(f"< {command}")
-        self.irc.send((command + "\r\n").encode())
+        self._irc.send((command + "\r\n").encode())
 
     def connect(self):
-        self.irc.connect((self.server, self.port))
+        self._irc.connect((self._server, self._port))
         time.sleep(3)
-        self.send_command(f"PASS oauth:{self.oauth_token}")
-        self.send_command(f"NICK {self.nick}")
+        self.send_command(f"PASS oauth:{self._oauth_token}")
+        self.send_command(f"NICK {self._nick}")
         self.send_command(f"CAP REQ :twitch.tv/membership")
         self.send_command(f"CAP REQ :twitch.tv/tags")
         self.send_command(f"CAP REQ :twitch.tv/commands")
 
     def join_channel(self, channel: str):
         self.send_command(f"{Commands.JOIN.value} #{channel}")
-        self.connected_channels.append(channel)
+        self._connected_channels.append(channel)
 
     def join_channels(self, channels: list[str]):
         for channel in channels:
@@ -63,11 +63,18 @@ class Bot:
 
     def leave_channel(self, channel: str):
         self.send_command(f"{Commands.PART.value} #{channel}")
-        self.connected_channels.remove(channel)
+        self._connected_channels.remove(channel)
 
-    def send_privmsg(self, channel: str, text: str):
-        print(f"#{channel} ({Commands.PRIVMSG.value}) | {self.nick}: {text}")
-        self.send_command(f"{Commands.PRIVMSG.value} #{channel} :{text}")
+    def send_privmsg(self, channel: str, text: Union[list[str], str]):
+        if isinstance(text, list):
+            for t in text:
+                print(
+                    f"#{channel} ({Commands.PRIVMSG.value}) | {self._nick}: {t}")
+                self.send_command(
+                    f"{Commands.PRIVMSG.value} #{channel} :{t}")
+        else:
+            print(f"#{channel} ({Commands.PRIVMSG.value}) | {self._nick}: {text}")
+            self.send_command(f"{Commands.PRIVMSG.value} #{channel} :{text}")
 
     @staticmethod
     def parse_message(received_msg: str) -> Message:
@@ -134,7 +141,7 @@ class Bot:
         #         break
         # else:
         #     sys.exit(1)
-        received_msgs = self.irc.recv(2048).decode()
+        received_msgs = self._irc.recv(2048).decode()
         for received_msgs in received_msgs.split("\r\n"):
             messages.append(self._handle_message(received_msgs))
         return messages
