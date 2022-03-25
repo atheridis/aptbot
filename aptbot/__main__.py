@@ -1,6 +1,7 @@
 import socket
 import aptbot.args
 import time
+import aptbot.args_logic
 import aptbot.bot
 import os
 import sys
@@ -10,21 +11,9 @@ import traceback
 from threading import Thread
 from dotenv import load_dotenv
 from types import ModuleType
+from aptbot import *
 
 load_dotenv()
-
-if "XDG_CONFIG_HOME" in os.environ:
-    CONFIG_HOME = os.environ["XDG_CONFIG_HOME"]
-elif "APPDATA" in os.environ:
-    CONFIG_HOME = os.environ["APPDATA"]
-else:
-    CONFIG_HOME = os.path.join(os.environ["HOME"], ".config")
-
-CONFIG_PATH = os.path.join(CONFIG_HOME, f"aptbot")
-
-
-PORT = 26538
-LOCALHOST = "127.0.0.1"
 
 
 def loop(bot: aptbot.bot.Bot, modules: dict[str, ModuleType]):
@@ -111,15 +100,15 @@ def listener():
         except IndexError:
             pass
         else:
-            if "JOIN" in command:
+            if aptbot.args_logic.Commands.JOIN.value in command:
                 bot.join_channel(channel)
-            elif "SEND" in command:
+            elif aptbot.args_logic.Commands.SEND.value in command:
                 bot.send_privmsg(channel, msg)
-            elif "KILL" in command:
+            elif aptbot.args_logic.Commands.KILL.value in command:
                 sys.exit()
-            elif "UPDATE" in command:
+            elif aptbot.args_logic.Commands.UPDATE.value in command:
                 update_modules(modules)
-            elif "PART" in command:
+            elif aptbot.args_logic.Commands.PART.value in command:
                 bot.leave_channel(channel)
 
         time.sleep(1)
@@ -132,70 +121,6 @@ def send(func,):
         func(s, *args, **kwargs)
         s.close()
     return inner
-
-
-def add_account(s: socket.socket, acc: str):
-    account_path = os.path.join(CONFIG_PATH, f"{acc}")
-    hidden_account_path = os.path.join(CONFIG_PATH, f".{acc}")
-
-    try:
-        os.rename(hidden_account_path, account_path)
-    except FileNotFoundError:
-        pass
-    os.makedirs(account_path, exist_ok=True)
-
-    # print(os.listdir("."))
-    # shutil.copy("message_interpreter.py", account_path)
-    try:
-        f = open(os.path.join(account_path, "message_interpreter.py"), "r")
-    except FileNotFoundError:
-        f = open(os.path.join(account_path, "message_interpreter.py"), "a")
-        f.write("""from aptbot.bot import Bot, Message, Commands
-def main(bot, message: Message):
-    pass""")
-        f.close()
-    else:
-        f.close()
-
-    command = "JOIN"
-    channel = acc
-    msg = ""
-    s.send(bytes(f"{command}==={channel}==={msg}", "utf-8"))
-
-
-def send_msg(s: socket.socket, msg: str):
-    command = "SEND"
-    channel = msg.split(' ')[0]
-    msg = msg[len(channel) + 1:]
-    s.send(bytes(f"{command}==={channel}==={msg}", "utf-8"))
-
-
-def disable(s: socket.socket):
-    command = "KILL"
-    channel = ""
-    msg = ""
-    s.send(bytes(f"{command}==={channel}==={msg}", "utf-8"))
-
-
-def disable_account(s: socket.socket, acc: str):
-    account_path = os.path.join(CONFIG_PATH, f"{acc}")
-    hidden_account_path = os.path.join(CONFIG_PATH, f".{acc}")
-    try:
-        os.rename(account_path, hidden_account_path)
-    except FileNotFoundError:
-        print(f"Account {acc} is already disabled.")
-
-    command = "PART"
-    channel = ""
-    msg = ""
-    s.send(bytes(f"{command}==={channel}==={msg}", "utf-8"))
-
-
-def update(s: socket.socket):
-    command = "UPDATE"
-    channel = ""
-    msg = ""
-    s.send(bytes(f"{command}==={channel}==={msg}", "utf-8"))
 
 
 def main():
@@ -211,15 +136,15 @@ def main():
         pass
 
     if argsv.add_account:
-        add_account(s, argsv.add_account)
+        aptbot.args_logic.add_account(s, argsv.add_account)
     if argsv.disable_account:
-        disable_account(s, argsv.disable_account)
+        aptbot.args_logic.disable_account(s, argsv.disable_account)
     if argsv.send_message:
-        send_msg(s, argsv.send_message)
+        aptbot.args_logic.send_msg(s, argsv.send_message)
     if argsv.disable:
-        disable(s)
+        aptbot.args_logic.disable(s)
     if argsv.update:
-        update(s)
+        aptbot.args_logic.update(s)
     s.close()
 
 
