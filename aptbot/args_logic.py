@@ -23,11 +23,11 @@ def add_account(s: socket.socket, acc: str):
     os.makedirs(account_path, exist_ok=True)
 
     # print(os.listdir("."))
-    # shutil.copy("message_interpreter.py", account_path)
+    # shutil.copy("main.py", account_path)
     try:
-        f = open(os.path.join(account_path, "message_interpreter.py"), "r")
+        f = open(os.path.join(account_path, "main.py"), "r")
     except FileNotFoundError:
-        f = open(os.path.join(account_path, "message_interpreter.py"), "a")
+        f = open(os.path.join(account_path, "main.py"), "a")
         f.write("""from aptbot.bot import Bot, Message, Commands
 def main(bot, message: Message):
     pass""")

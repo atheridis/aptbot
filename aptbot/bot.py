@@ -46,7 +46,7 @@ class Bot:
 
     def connect(self):
         self._irc.connect((self._server, self._port))
-        time.sleep(3)
+        time.sleep(1.5)
         self.send_command(f"PASS oauth:{self._oauth_token}")
         self.send_command(f"NICK {self._nick}")
         self.send_command(f"CAP REQ :twitch.tv/membership")
@@ -72,12 +72,14 @@ class Bot:
                     f"#{channel} ({Commands.PRIVMSG.value}) | {self._nick}: {t}")
                 self.send_command(
                     f"{Commands.PRIVMSG.value} #{channel} :{t}")
+                time.sleep(1.5)
         else:
             print(f"#{channel} ({Commands.PRIVMSG.value}) | {self._nick}: {text}")
             self.send_command(f"{Commands.PRIVMSG.value} #{channel} :{text}")
 
     @staticmethod
     def parse_message(received_msg: str) -> Message:
+        print(received_msg)
         message = Message()
 
         value_start = received_msg.find(
@@ -121,26 +123,6 @@ class Bot:
 
     def receive_messages(self) -> list[Message]:
         messages = []
-        # i = 0
-        # while i < 5:
-        #     if i:
-        #         try:
-        #             self.connect()
-        #             self.join_channels(self.connected_channels)
-        #         except OSError as e:
-        #             print(f"Connection failed {e}")
-        #     try:
-        #         received_msgs = self.irc.recv(2048).decode()
-        #     except ConnectionResetError as e:
-        #         print(f"There was an error connecting with error {e}")
-        #         print("Trying to connect again")
-        #         time.sleep(2**i+1)
-        #         i += 1
-        #     else:
-        #         print("broke")
-        #         break
-        # else:
-        #     sys.exit(1)
         received_msgs = self._irc.recv(2048).decode()
         for received_msgs in received_msgs.split("\r\n"):
             messages.append(self._handle_message(received_msgs))

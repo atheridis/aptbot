@@ -17,28 +17,31 @@ load_dotenv()
 
 
 def loop(bot: aptbot.bot.Bot, modules: dict[str, ModuleType]):
-    update_modules(modules)
+    load_modules(modules)
     while True:
         messages = bot.receive_messages()
         for message in messages:
-            if message.channel:
-                if message.command:
-                    print(
-                        f"#{message.channel} ({message.command.value}) | {message.nick}: {message.value}")
-                try:
-                    method = Thread(
-                        target=modules[message.channel].main,
-                        args=(bot, message, )
-                    )
-                except KeyError:
-                    pass
-                else:
-                    method.daemon = True
-                    method.start()
+            if not message.channel:
+                continue
+            # if message.command:
+            #     print(
+            #         f"#{message.channel} ({message.command.value}) | \
+# {message.nick}: {message.value}"
+            #     )
+            try:
+                method = Thread(
+                    target=modules[message.channel].main,
+                    args=(bot, message, )
+                )
+            except KeyError:
+                pass
+            else:
+                method.daemon = True
+                method.start()
         time.sleep(0.01)
 
 
-def update_modules(modules: dict[str, ModuleType]):
+def load_modules(modules: dict[str, ModuleType]):
     modules.clear()
     channels = filter(lambda x: not x.startswith('.'), os.listdir(CONFIG_PATH))
     channels = list(channels)
@@ -47,20 +50,23 @@ def update_modules(modules: dict[str, ModuleType]):
         account_path = os.path.join(CONFIG_PATH, f"{channel}")
         sys.path.append(account_path)
         module_path = os.path.join(
-            account_path, f"message_interpreter.py")
+            account_path, f"main.py")
         spec = importlib.util.spec_from_file_location(
-            "message_interpreter",
+            "main",
             module_path,
         )
-        if spec and spec.loader:
-            foo = importlib.util.module_from_spec(spec)
-            try:
-                spec.loader.exec_module(foo)
-            except Exception as e:
-                print(traceback.format_exc())
-                print(f"Problem Loading Module: {e}")
-            else:
-                modules[channel] = foo
+        if not spec or not spec.loader:
+            print("Problem loading spec")
+            sys.path.remove(account_path)
+            continue
+        module = importlib.util.module_from_spec(spec)
+        try:
+            spec.loader.exec_module(module)
+        except Exception as e:
+            print(traceback.format_exc())
+            print(f"Problem Loading Module: {e}")
+        else:
+            modules[channel] = module
         sys.path.remove(account_path)
 
 
@@ -75,6 +81,7 @@ def listener():
     NICK = os.getenv("APTBOT_NICK")
     OAUTH = os.getenv("APTBOT_OAUTH")
     CLIENT_ID = os.getenv("APTBOT_CLIENT_ID")
+    print(f"NICK: {NICK}")
     if NICK and OAUTH and CLIENT_ID:
         bot = aptbot.bot.Bot(NICK, OAUTH, CLIENT_ID)
     else:
@@ -107,7 +114,7 @@ def listener():
             elif aptbot.args_logic.Commands.KILL.value in command:
                 sys.exit()
             elif aptbot.args_logic.Commands.UPDATE.value in command:
-                update_modules(modules)
+                load_modules(modules)
             elif aptbot.args_logic.Commands.PART.value in command:
                 bot.leave_channel(channel)
 

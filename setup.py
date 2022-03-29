@@ -6,7 +6,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="aptbot",
-    version="0.0.1",
+    version="0.0.2",
     author="Georgios Atheridis",
     author_email="atheridis@tutamail.com",
     description="A chatbot for twitch.tv",
@@ -18,12 +18,13 @@ setuptools.setup(
     ],
     packages=setuptools.find_packages(),
     entry_points={
-        'console_scripts': [
-            'aptbot=aptbot.__main__:main',
+        "console_scripts": [
+            "aptbot=aptbot.__main__:main",
         ],
     },
     install_requires=[
-        'dotenv',
+        "python-dotenv",
+        "urllib3",
     ],
     python_requires=">=3.7",
 )
