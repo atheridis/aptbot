@@ -43,9 +43,10 @@ def loop(bot: aptbot.bot.Bot, modules: dict[str, ModuleType]):
 
 def load_modules(modules: dict[str, ModuleType]):
     modules.clear()
-    channels = filter(lambda x: not x.startswith('.'), os.listdir(CONFIG_PATH))
-    channels = list(channels)
-    # print(channels)
+    channels = [
+        c for c in os.listdir(CONFIG_PATH) if os.path.isdir(os.path.join(CONFIG_PATH, c))
+    ]
+    channels = filter(lambda x: not x.startswith('.'), channels)
     for channel in channels:
         account_path = os.path.join(CONFIG_PATH, f"{channel}")
         sys.path.append(account_path)
@@ -71,7 +72,10 @@ def load_modules(modules: dict[str, ModuleType]):
 
 
 def initialize(bot: aptbot.bot.Bot):
-    channels = os.listdir(CONFIG_PATH)
+    channels = [
+        c for c in os.listdir(CONFIG_PATH) if os.path.isdir(os.path.join(CONFIG_PATH, c))
+    ]
+    channels = filter(lambda x: not x.startswith('.'), channels)
     for channel in channels:
         if not channel.startswith('.'):
             bot.join_channel(channel)
@@ -81,7 +85,6 @@ def listener():
     NICK = os.getenv("APTBOT_NICK")
     OAUTH = os.getenv("APTBOT_OAUTH")
     CLIENT_ID = os.getenv("APTBOT_CLIENT_ID")
-    print(f"NICK: {NICK}")
     if NICK and OAUTH and CLIENT_ID:
         bot = aptbot.bot.Bot(NICK, OAUTH, CLIENT_ID)
     else:

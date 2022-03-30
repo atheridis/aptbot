@@ -28,7 +28,7 @@ def get_channels(*channel_ids: str) -> Optional[list[Channel]]:
         return None
 
     data = json.loads(r.data.decode("utf-8"))["data"]
-    channels = []
+    channels: list[Channel] = []
 
     for channel in data:
         channels.append(
