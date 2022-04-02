@@ -30,13 +30,12 @@ class Message:
 
 
 class Bot:
-    def __init__(self, nick: str, oauth_token: str, client_id: str):
+    def __init__(self, nick: str, oauth_token: str):
         self._irc = socket.socket()
         self._server = "irc.chat.twitch.tv"
         self._port = 6667
         self._nick = nick
         self._oauth_token = oauth_token
-        self._client_id = client_id
         self._connected_channels = []
 
     def send_command(self, command: str):

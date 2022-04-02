@@ -16,8 +16,7 @@ from aptbot import *
 load_dotenv()
 
 
-def loop(bot: aptbot.bot.Bot, modules: dict[str, ModuleType]):
-    load_modules(modules)
+def handle_message(bot: aptbot.bot.Bot, modules: dict[str, ModuleType]):
     while True:
         messages = bot.receive_messages()
         for message in messages:
@@ -38,7 +37,43 @@ def loop(bot: aptbot.bot.Bot, modules: dict[str, ModuleType]):
             else:
                 method.daemon = True
                 method.start()
-        time.sleep(0.01)
+        time.sleep(0.1)
+
+
+def update_channel_events(bot: aptbot.bot.Bot, message: aptbot.bot.Message, modules: dict[str, ModuleType]):
+    try:
+        method = Thread(
+            target=modules[message.channel].main,
+            args=(bot, message, )
+        )
+    except KeyError:
+        pass
+    else:
+        method.daemon = True
+        method.start()
+
+
+def start(bot: aptbot.bot.Bot, modules: dict[str, ModuleType]):
+    load_modules(modules)
+    message_handler_thread = Thread(
+        target=handle_message,
+        args=(bot, modules, )
+    )
+    message_handler_thread.daemon = True
+    message_handler_thread.start()
+    while True:
+        for channel, _ in modules:
+            update_channel_thread = Thread(
+                target=update_channel_events,
+                args=(
+                    bot,
+                    aptbot.bot.Message({}, "", None, channel, ""),
+                    modules,
+                )
+            )
+            update_channel_thread.daemon = True
+            update_channel_thread.start()
+        time.sleep(10)
 
 
 def load_modules(modules: dict[str, ModuleType]):
@@ -83,15 +118,14 @@ def initialize(bot: aptbot.bot.Bot):
 
 def listener():
     NICK = os.getenv("APTBOT_NICK")
-    OAUTH = os.getenv("APTBOT_OAUTH")
-    CLIENT_ID = os.getenv("APTBOT_CLIENT_ID")
-    if NICK and OAUTH and CLIENT_ID:
-        bot = aptbot.bot.Bot(NICK, OAUTH, CLIENT_ID)
+    OAUTH = os.getenv("APTBOT_PASS")
+    if NICK and OAUTH:
+        bot = aptbot.bot.Bot(NICK, OAUTH)
     else:
         sys.exit(1)
     bot.connect()
     modules = {}
-    message_loop = Thread(target=loop, args=(bot, modules, ))
+    message_loop = Thread(target=start, args=(bot, modules, ))
     message_loop.daemon = True
     message_loop.start()
     s = socket.socket()
