@@ -39,8 +39,8 @@ class Bot:
         self._connected_channels = []
 
     def send_command(self, command: str):
-        if "PASS" not in command:
-            print(f"< {command}")
+        # if "PASS" not in command:
+        #     print(f"< {command}")
         self._irc.send((command + "\r\n").encode())
 
     def connect(self):
@@ -67,18 +67,17 @@ class Bot:
     def send_privmsg(self, channel: str, text: Union[list[str], str]):
         if isinstance(text, list):
             for t in text:
-                print(
-                    f"#{channel} ({Commands.PRIVMSG.value}) | {self._nick}: {t}")
+                # print(
+                #     f"#{channel} ({Commands.PRIVMSG.value}) | {self._nick}: {t}")
                 self.send_command(
                     f"{Commands.PRIVMSG.value} #{channel} :{t}")
-                time.sleep(1.5)
         else:
-            print(f"#{channel} ({Commands.PRIVMSG.value}) | {self._nick}: {text}")
+            # print(f"#{channel} ({Commands.PRIVMSG.value}) | {self._nick}: {text}")
             self.send_command(f"{Commands.PRIVMSG.value} #{channel} :{text}")
 
     @staticmethod
     def parse_message(received_msg: str) -> Message:
-        print(received_msg)
+        # print(received_msg)
         message = Message()
 
         value_start = received_msg.find(

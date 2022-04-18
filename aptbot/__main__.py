@@ -40,19 +40,6 @@ def handle_message(bot: aptbot.bot.Bot, modules: dict[str, ModuleType]):
         time.sleep(0.1)
 
 
-def update_channel_events(bot: aptbot.bot.Bot, message: aptbot.bot.Message, modules: dict[str, ModuleType]):
-    try:
-        method = Thread(
-            target=modules[message.channel].main,
-            args=(bot, message, )
-        )
-    except KeyError:
-        pass
-    else:
-        method.daemon = True
-        method.start()
-
-
 def start(bot: aptbot.bot.Bot, modules: dict[str, ModuleType]):
     load_modules(modules)
     message_handler_thread = Thread(
@@ -61,19 +48,13 @@ def start(bot: aptbot.bot.Bot, modules: dict[str, ModuleType]):
     )
     message_handler_thread.daemon = True
     message_handler_thread.start()
-    while True:
-        for channel, _ in modules:
-            update_channel_thread = Thread(
-                target=update_channel_events,
-                args=(
-                    bot,
-                    aptbot.bot.Message({}, "", None, channel, ""),
-                    modules,
-                )
-            )
-            update_channel_thread.daemon = True
-            update_channel_thread.start()
-        time.sleep(10)
+    for channel in modules:
+        update_channel = Thread(
+            target=modules[channel].start,
+            args=(bot, )
+        )
+        update_channel.daemon = True
+        update_channel.start()
 
 
 def load_modules(modules: dict[str, ModuleType]):
