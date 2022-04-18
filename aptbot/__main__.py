@@ -51,7 +51,7 @@ def start(bot: aptbot.bot.Bot, modules: dict[str, ModuleType]):
     for channel in modules:
         update_channel = Thread(
             target=modules[channel].start,
-            args=(bot, )
+            args=(bot, aptbot.bot.Message({}, "", None, channel, ""), )
         )
         update_channel.daemon = True
         update_channel.start()
