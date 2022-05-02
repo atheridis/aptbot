@@ -1,5 +1,6 @@
 import socket
 import time
+import re
 from enum import Enum
 from dataclasses import dataclass, field
 from typing import Optional, Union
@@ -64,16 +65,21 @@ class Bot:
         self.send_command(f"{Commands.PART.value} #{channel}")
         self._connected_channels.remove(channel)
 
-    def send_privmsg(self, channel: str, text: Union[list[str], str]):
+    def send_privmsg(self, channel: str, text: Union[list[str], str], reply=None):
+        if reply:
+            replied_command = f"@reply-parent-msg-id={reply} "
+        else:
+            replied_command = ""
         if isinstance(text, list):
             for t in text:
                 # print(
                 #     f"#{channel} ({Commands.PRIVMSG.value}) | {self._nick}: {t}")
-                self.send_command(
-                    f"{Commands.PRIVMSG.value} #{channel} :{t}")
+                command = replied_command + f"{Commands.PRIVMSG.value} #{channel} :{t}"
+                self.send_command(command)
         else:
             # print(f"#{channel} ({Commands.PRIVMSG.value}) | {self._nick}: {text}")
-            self.send_command(f"{Commands.PRIVMSG.value} #{channel} :{text}")
+            command = replied_command + f"{Commands.PRIVMSG.value} #{channel} :{text}"
+            self.send_command(command)
 
     @staticmethod
     def parse_message(received_msg: str) -> Message:
@@ -108,6 +114,13 @@ class Bot:
             elif part.startswith('#'):
                 part = part[1:]
                 message.channel = part
+
+        regex = re.compile(r"([^\\])(\\s)")
+        try:
+            message.tags["reply-parent-msg-body"] = regex.sub(r"\1 ", message.tags["reply-parent-msg-body"])
+            message.tags["reply-parent-msg-body"] = message.tags["reply-parent-msg-body"].replace("\\\\", "\\")
+        except KeyError:
+            pass
 
         return message
 
