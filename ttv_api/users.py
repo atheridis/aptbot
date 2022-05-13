@@ -15,7 +15,9 @@ class User:
     created_at: datetime
 
 
-def get_users(user_ids: list[str] = [], user_logins: list[str] = []) -> Optional[list[User]]:
+def get_users(
+    user_ids: list[str] = [], user_logins: list[str] = []
+) -> Optional[list[User]]:
     params = "?"
     for user_id in user_ids:
         params += f"id={user_id}&"

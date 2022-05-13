@@ -115,12 +115,32 @@ class Bot:
                 part = part[1:]
                 message.channel = part
 
-        regex = re.compile(r"([^\\])(\\s)")
-        try:
-            message.tags["reply-parent-msg-body"] = regex.sub(r"\1 ", message.tags["reply-parent-msg-body"])
-            message.tags["reply-parent-msg-body"] = message.tags["reply-parent-msg-body"].replace("\\\\", "\\")
-        except KeyError:
-            pass
+        message.value = ' '.join(message.value.split())
+
+        if not message.tags.get("reply-parent-msg-body", None):
+            return message
+
+        rep = message.tags["reply-parent-msg-body"]
+        new_rep = ""
+        ignore_next = False
+        for i in range(len(rep)):
+            if ignore_next:
+                ignore_next = False
+                continue
+            if not rep[i] == "\\":
+                new_rep += rep[i]
+                ignore_next = False
+                continue
+            if i + 1 == len(rep):
+                new_rep += rep[i]
+                break
+            if rep[i+1] == "\\":
+                new_rep += "\\"
+            elif rep[i+1] == "s":
+                new_rep += " "
+            ignore_next = True
+
+        message.tags["reply-parent-msg-body"] = ' '.join(new_rep.split())
 
         return message
 
