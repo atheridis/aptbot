@@ -40,13 +40,12 @@ class Bot:
         self._connected_channels = []
 
     def send_command(self, command: str):
-        # if "PASS" not in command:
-        #     print(f"< {command}")
+        if "PASS" not in command:
+            print(f"< {command}")
         self._irc.send((command + "\r\n").encode())
 
     def connect(self):
         self._irc.connect((self._server, self._port))
-        time.sleep(1.5)
         self.send_command(f"PASS oauth:{self._oauth_token}")
         self.send_command(f"NICK {self._nick}")
         self.send_command(f"CAP REQ :twitch.tv/membership")
@@ -87,37 +86,37 @@ class Bot:
         message = Message()
 
         value_start = received_msg.find(
-            ':',
-            received_msg.find(' ', received_msg.find(' ') + 1)
+            ":", received_msg.find(" ", received_msg.find(" ") + 1)
         )
         if value_start != -1:
             message.value = received_msg[value_start:][1:]
-            received_msg = received_msg[:value_start - 1]
+            received_msg = received_msg[: value_start - 1]
 
-        parts = received_msg.split(' ')
+        parts = received_msg.split(" ")
 
         for part in parts:
-            if part.startswith('@'):
+            if part.startswith("@"):
                 part = part[1:]
-                for tag in part.split(';'):
-                    tag = tag.split('=')
+                for tag in part.split(";"):
+                    tag = tag.split("=")
                     try:
                         message.tags[tag[0]] = tag[1]
                     except IndexError:
                         message.tags[tag[0]] = ""
-            elif part.startswith(':'):
+            elif part.startswith(":"):
                 part = part[1:]
-                if '!' in part:
-                    message.nick = part.split('!')[0]
+                if "!" in part:
+                    message.nick = part.split("!")[0]
             elif part in set(command.value for command in Commands):
                 message.command = Commands(part)
-            elif part.startswith('#'):
+            elif part.startswith("#"):
                 part = part[1:]
                 message.channel = part
 
-        message.value = ' '.join(message.value.split())
+        message.value = " ".join(message.value.split())
 
         if not message.tags.get("reply-parent-msg-body", None):
+            print(message)
             return message
 
         rep = message.tags["reply-parent-msg-body"]
@@ -134,14 +133,15 @@ class Bot:
             if i + 1 == len(rep):
                 new_rep += rep[i]
                 break
-            if rep[i+1] == "\\":
+            if rep[i + 1] == "\\":
                 new_rep += "\\"
-            elif rep[i+1] == "s":
+            elif rep[i + 1] == "s":
                 new_rep += " "
             ignore_next = True
 
-        message.tags["reply-parent-msg-body"] = ' '.join(new_rep.split())
+        message.tags["reply-parent-msg-body"] = " ".join(new_rep.split())
 
+        print(message)
         return message
 
     def _handle_message(self, received_msg: str) -> Message:

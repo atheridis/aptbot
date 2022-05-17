@@ -25,12 +25,15 @@ def handle_message(bot: aptbot.bot.Bot, modules: dict[str, ModuleType]):
             # if message.command:
             #     print(
             #         f"#{message.channel} ({message.command.value}) | \
-# {message.nick}: {message.value}"
+            # {message.nick}: {message.value}"
             #     )
             try:
                 method = Thread(
                     target=modules[message.channel].main,
-                    args=(bot, message, )
+                    args=(
+                        bot,
+                        message,
+                    ),
                 )
             except KeyError:
                 pass
@@ -44,14 +47,20 @@ def start(bot: aptbot.bot.Bot, modules: dict[str, ModuleType]):
     load_modules(modules)
     message_handler_thread = Thread(
         target=handle_message,
-        args=(bot, modules, )
+        args=(
+            bot,
+            modules,
+        ),
     )
     message_handler_thread.daemon = True
     message_handler_thread.start()
     for channel in modules:
         update_channel = Thread(
             target=modules[channel].start,
-            args=(bot, aptbot.bot.Message({}, "", None, channel, ""), )
+            args=(
+                bot,
+                aptbot.bot.Message({}, "", None, channel, ""),
+            ),
         )
         update_channel.daemon = True
         update_channel.start()
@@ -60,14 +69,15 @@ def start(bot: aptbot.bot.Bot, modules: dict[str, ModuleType]):
 def load_modules(modules: dict[str, ModuleType]):
     modules.clear()
     channels = [
-        c for c in os.listdir(CONFIG_PATH) if os.path.isdir(os.path.join(CONFIG_PATH, c))
+        c
+        for c in os.listdir(CONFIG_PATH)
+        if os.path.isdir(os.path.join(CONFIG_PATH, c))
     ]
-    channels = filter(lambda x: not x.startswith('.'), channels)
+    channels = filter(lambda x: not x.startswith("."), channels)
     for channel in channels:
         account_path = os.path.join(CONFIG_PATH, f"{channel}")
         sys.path.append(account_path)
-        module_path = os.path.join(
-            account_path, f"main.py")
+        module_path = os.path.join(account_path, f"main.py")
         spec = importlib.util.spec_from_file_location(
             "main",
             module_path,
@@ -89,11 +99,13 @@ def load_modules(modules: dict[str, ModuleType]):
 
 def initialize(bot: aptbot.bot.Bot):
     channels = [
-        c for c in os.listdir(CONFIG_PATH) if os.path.isdir(os.path.join(CONFIG_PATH, c))
+        c
+        for c in os.listdir(CONFIG_PATH)
+        if os.path.isdir(os.path.join(CONFIG_PATH, c))
     ]
-    channels = filter(lambda x: not x.startswith('.'), channels)
+    channels = filter(lambda x: not x.startswith("."), channels)
     for channel in channels:
-        if not channel.startswith('.'):
+        if not channel.startswith("."):
             bot.join_channel(channel)
 
 
@@ -106,7 +118,13 @@ def listener():
         sys.exit(1)
     bot.connect()
     modules = {}
-    message_loop = Thread(target=start, args=(bot, modules, ))
+    message_loop = Thread(
+        target=start,
+        args=(
+            bot,
+            modules,
+        ),
+    )
     message_loop.daemon = True
     message_loop.start()
     s = socket.socket()
@@ -139,12 +157,13 @@ def listener():
         time.sleep(1)
 
 
-def send(func,):
+def send(func):
     def inner(*args, **kwargs):
         s = socket.socket()
         s.connect((LOCALHOST, PORT))
         func(s, *args, **kwargs)
         s.close()
+
     return inner
 
 
