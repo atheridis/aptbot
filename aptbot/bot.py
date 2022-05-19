@@ -1,4 +1,4 @@
-import socket
+import websocket
 import time
 import re
 from enum import Enum
@@ -32,9 +32,8 @@ class Message:
 
 class Bot:
     def __init__(self, nick: str, oauth_token: str):
-        self._irc = socket.socket()
-        self._server = "irc.chat.twitch.tv"
-        self._port = 6667
+        self._irc = websocket.WebSocket()
+        self._server = "wss://irc-ws.chat.twitch.tv:443"
         self._nick = nick
         self._oauth_token = oauth_token
         self._connected_channels = []
@@ -45,7 +44,7 @@ class Bot:
         self._irc.send((command + "\r\n").encode())
 
     def connect(self):
-        self._irc.connect((self._server, self._port))
+        self._irc.connect(self._server)
         self.send_command(f"PASS oauth:{self._oauth_token}")
         self.send_command(f"NICK {self._nick}")
         self.send_command(f"CAP REQ :twitch.tv/membership")
@@ -154,7 +153,7 @@ class Bot:
 
     def receive_messages(self) -> list[Message]:
         messages = []
-        received_msgs = self._irc.recv(2048).decode()
+        received_msgs = self._irc.recv()
         for received_msgs in received_msgs.split("\r\n"):
             messages.append(self._handle_message(received_msgs))
         return messages
