@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="aptbot",
-    version="0.0.2",
+    version="0.1.0",
     author="Georgios Atheridis",
     author_email="atheridis@tutamail.com",
     description="A chatbot for twitch.tv",
@@ -13,18 +13,20 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/atheridis/aptbot",
     classifiers=[
-        "License :: OSI Approved :: MIT License"
+        "License :: OSI Approved :: MIT License",
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 3.9",
     ],
     packages=setuptools.find_packages(),
+    package_data={"aptbot": ["resources/main.py"]},
     entry_points={
         "console_scripts": [
-            "aptbot=aptbot.__main__:main",
+            "aptbot=aptbot.main:main",
         ],
     },
     install_requires=[
         "python-dotenv",
         "urllib3",
-        "websocket-client"
     ],
-    python_requires=">=3.7",
+    python_requires=">=3.9",
 )

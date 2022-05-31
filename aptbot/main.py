@@ -1,5 +1,7 @@
 import importlib
 import importlib.util
+import logging
+import logging.config
 import os
 import socket
 import sys
@@ -10,25 +12,23 @@ from types import ModuleType
 
 from dotenv import load_dotenv
 
-import aptbot.args
-import aptbot.args_logic
-import aptbot.bot
-from aptbot import *
+from . import args_logic
+from .args import parse_arguments
+from .bot import Bot, Message
+from .constants import CONFIG_LOGS, CONFIG_PATH, LOCALHOST, LOGGING_DICT, PORT
+
+logging.config.dictConfig(LOGGING_DICT)
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
 
-def handle_message(bot: aptbot.bot.Bot, modules: dict[str, ModuleType]):
+def handle_message(bot: Bot, modules: dict[str, ModuleType]):
     while True:
         messages = bot.receive_messages()
         for message in messages:
             if not message.channel:
                 continue
-            # if message.command:
-            #     print(
-            #         f"#{message.channel} ({message.command.value}) | \
-            # {message.nick}: {message.value}"
-            #     )
             try:
                 method = Thread(
                     target=modules[message.channel].main,
@@ -44,7 +44,7 @@ def handle_message(bot: aptbot.bot.Bot, modules: dict[str, ModuleType]):
                 method.start()
 
 
-def start(bot: aptbot.bot.Bot, modules: dict[str, ModuleType]):
+def start(bot: Bot, modules: dict[str, ModuleType]):
     load_modules(modules)
     message_handler_thread = Thread(
         target=handle_message,
@@ -60,7 +60,7 @@ def start(bot: aptbot.bot.Bot, modules: dict[str, ModuleType]):
             target=modules[channel].start,
             args=(
                 bot,
-                aptbot.bot.Message({}, "", None, channel, ""),
+                Message({}, "", None, channel, ""),
             ),
         )
         update_channel.daemon = True
@@ -78,7 +78,7 @@ def load_modules(modules: dict[str, ModuleType]):
     for channel in channels:
         account_path = os.path.join(CONFIG_PATH, f"{channel}")
         sys.path.append(account_path)
-        module_path = os.path.join(account_path, f"main.py")
+        module_path = os.path.join(account_path, "main.py")
         spec = importlib.util.spec_from_file_location(
             "main",
             module_path,
@@ -91,14 +91,14 @@ def load_modules(modules: dict[str, ModuleType]):
         try:
             spec.loader.exec_module(module)
         except Exception as e:
-            print(traceback.format_exc())
-            print(f"Problem Loading Module: {e}")
+            logger.exception(f"Problem Loading Module: {e}")
+            logger.exception(traceback.format_exc())
         else:
             modules[channel] = module
         sys.path.remove(account_path)
 
 
-def initialize(bot: aptbot.bot.Bot):
+def initialize(bot: Bot):
     channels = [
         c
         for c in os.listdir(CONFIG_PATH)
@@ -114,8 +114,13 @@ def listener():
     NICK = os.getenv("APTBOT_NICK")
     OAUTH = os.getenv("APTBOT_PASS")
     if NICK and OAUTH:
-        bot = aptbot.bot.Bot(NICK, OAUTH)
+        bot = Bot(NICK, OAUTH)
     else:
+        print(
+            "Please set the environment variables:\nAPTBOT_NICK\nAPTBOT_PASS",
+            file=sys.stderr,
+        )
+        time.sleep(3)
         sys.exit(1)
     bot.connect()
     modules = {}
@@ -144,15 +149,15 @@ def listener():
         except IndexError:
             pass
         else:
-            if aptbot.args_logic.Commands.JOIN.value in command:
+            if args_logic.BotCommands.JOIN.value in command:
                 bot.join_channel(channel)
-            elif aptbot.args_logic.Commands.SEND.value in command:
+            elif args_logic.BotCommands.SEND.value in command:
                 bot.send_privmsg(channel, msg)
-            elif aptbot.args_logic.Commands.KILL.value in command:
+            elif args_logic.BotCommands.KILL.value in command:
                 sys.exit()
-            elif aptbot.args_logic.Commands.UPDATE.value in command:
+            elif args_logic.BotCommands.UPDATE.value in command:
                 load_modules(modules)
-            elif aptbot.args_logic.Commands.PART.value in command:
+            elif args_logic.BotCommands.PART.value in command:
                 bot.leave_channel(channel)
 
         time.sleep(1)
@@ -169,8 +174,9 @@ def send(func):
 
 
 def main():
-    argsv = aptbot.args.parse_arguments()
+    argsv = parse_arguments()
     os.makedirs(CONFIG_PATH, exist_ok=True)
+    os.makedirs(CONFIG_LOGS, exist_ok=True)
     if argsv.enable:
         listener()
 
@@ -181,15 +187,15 @@ def main():
         pass
 
     if argsv.add_account:
-        aptbot.args_logic.add_account(s, argsv.add_account)
+        args_logic.add_account(s, argsv.add_account)
     if argsv.disable_account:
-        aptbot.args_logic.disable_account(s, argsv.disable_account)
+        args_logic.disable_account(s, argsv.disable_account)
     if argsv.send_message:
-        aptbot.args_logic.send_msg(s, argsv.send_message)
+        args_logic.send_msg(s, argsv.send_message)
     if argsv.disable:
-        aptbot.args_logic.disable(s)
+        args_logic.disable(s)
     if argsv.update:
-        aptbot.args_logic.update(s)
+        args_logic.update(s)
     s.close()
 
 
