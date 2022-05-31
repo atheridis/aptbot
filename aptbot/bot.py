@@ -1,9 +1,10 @@
-import websocket
-import time
 import re
-from enum import Enum
+import time
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Optional, Union
+
+import websocket
 
 
 class Commands(Enum):
@@ -115,7 +116,11 @@ class Bot:
         message.value = " ".join(message.value.split())
 
         if not message.tags.get("reply-parent-msg-body", None):
-            print(message)
+            # print(message)
+            try:
+                print(f"#{message.channel} | {message.tags['display-name']}: {message.value}")
+            except KeyError:
+                pass
             return message
 
         rep = message.tags["reply-parent-msg-body"]
@@ -140,7 +145,11 @@ class Bot:
 
         message.tags["reply-parent-msg-body"] = " ".join(new_rep.split())
 
-        print(message)
+        # print(message)
+        try:
+            print(f"#{message.channel} | {message.tags['display-name']}: {message.value}")
+        except KeyError:
+            pass
         return message
 
     def _handle_message(self, received_msg: str) -> Message:

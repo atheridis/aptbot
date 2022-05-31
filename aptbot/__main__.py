@@ -1,16 +1,18 @@
-import socket
-import aptbot.args
-import time
-import aptbot.args_logic
-import aptbot.bot
-import os
-import sys
 import importlib
 import importlib.util
+import os
+import socket
+import sys
+import time
 import traceback
 from threading import Thread
-from dotenv import load_dotenv
 from types import ModuleType
+
+from dotenv import load_dotenv
+
+import aptbot.args
+import aptbot.args_logic
+import aptbot.bot
 from aptbot import *
 
 load_dotenv()
@@ -40,7 +42,6 @@ def handle_message(bot: aptbot.bot.Bot, modules: dict[str, ModuleType]):
             else:
                 method.daemon = True
                 method.start()
-        time.sleep(0.1)
 
 
 def start(bot: aptbot.bot.Bot, modules: dict[str, ModuleType]):
