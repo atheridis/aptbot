@@ -24,10 +24,13 @@ def add_account(s: socket.socket, acc: str):
         pass
     os.makedirs(account_path, exist_ok=True)
 
-    shutil.copyfile(
-        os.path.join(os.path.dirname(os.path.realpath(__file__)), "resources/main.py"),
-        os.path.join(account_path, "main.py"),
-    )
+    if not os.path.exists(os.path.join(account_path, "main.py")):
+        shutil.copyfile(
+            os.path.join(
+                os.path.dirname(os.path.realpath(__file__)), "resources/main.py"
+            ),
+            os.path.join(account_path, "main.py"),
+        )
 
     command = BotCommands.JOIN.value
     channel = acc
