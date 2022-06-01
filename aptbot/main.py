@@ -154,6 +154,9 @@ def listener():
             elif args_logic.BotCommands.SEND.value in command:
                 bot.send_privmsg(channel, msg)
             elif args_logic.BotCommands.KILL.value in command:
+                bot.disconnect()
+                c.close()
+                s.close()
                 sys.exit()
             elif args_logic.BotCommands.UPDATE.value in command:
                 load_modules(modules)

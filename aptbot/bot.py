@@ -1,6 +1,7 @@
 import logging
 import re
 import socket
+import time
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional, Union
@@ -34,12 +35,11 @@ class Message:
 
 class Bot:
     def __init__(self, nick: str, oauth_token: str):
-        self._irc = socket.socket()
         self._server = "irc.chat.twitch.tv"
         self._port = 6667
         self._nick = nick
         self._oauth_token = oauth_token
-        self._connected_channels = []
+        self._connected_channels = set()
 
     def send_command(self, command: str):
         if "PASS" not in command:
@@ -47,18 +47,19 @@ class Bot:
         self._irc.send((command + "\r\n").encode())
 
     def connect(self):
+        self._irc = socket.socket()
         self._irc.connect((self._server, self._port))
         self.send_command(f"PASS oauth:{self._oauth_token}")
         self.send_command(f"NICK {self._nick}")
-        self.send_command(f"CAP REQ :twitch.tv/membership")
-        self.send_command(f"CAP REQ :twitch.tv/tags")
-        self.send_command(f"CAP REQ :twitch.tv/commands")
+        self.send_command(
+            f"CAP REQ :twitch.tv/membership twitch.tv/tags twitch.tv/commands"
+        )
 
     def join_channel(self, channel: str):
         self.send_command(f"{Commands.JOIN.value} #{channel}")
-        self._connected_channels.append(channel)
+        self._connected_channels.add(channel)
 
-    def join_channels(self, channels: list[str]):
+    def join_channels(self, channels: set[str]):
         for channel in channels:
             self.join_channel(channel)
 
@@ -99,6 +100,7 @@ class Bot:
             elif tag_value[i + 1] == "s":
                 new_tag_value += " "
             ignore_next = True
+        return new_tag_value
 
     @staticmethod
     def parse_message(received_msg: str) -> Message:
@@ -145,7 +147,25 @@ class Bot:
 
     def receive_messages(self) -> list[Message]:
         messages = []
-        received_msgs = self._irc.recv(2048)
+        while True:
+            try:
+                received_msgs = self._irc.recv(2048)
+            except ConnectionResetError as e:
+                logger.exception(e)
+                time.sleep(1)
+                self._restart_connection()
+            else:
+                break
         for received_msgs in received_msgs.decode("utf-8").split("\r\n"):
             messages.append(self._handle_message(received_msgs))
         return messages
+
+    def disconnect(self) -> None:
+        self._irc.close()
+
+    def _restart_connection(self) -> None:
+        self.disconnect()
+        time.sleep(5)
+        self.connect()
+        self.join_channels(self._connected_channels)
+        time.sleep(2)
