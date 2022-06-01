@@ -61,7 +61,7 @@ def disable_account(s: socket.socket, acc: str):
         print(f"Account {acc} is already disabled.")
 
     command = BotCommands.PART.value
-    channel = ""
+    channel = acc
     msg = ""
     try:
         s.send(bytes(f"{command}==={channel}==={msg}", "utf-8"))
