@@ -1,8 +1,16 @@
+import time
+from threading import Event
+
 from aptbot import Bot, Commands, Message
 
 
-def start(bot: Bot, message: Message):
-    pass
+# Starts when the bot is enabled
+# Sends the message "Hello, world!" every 2 minutes to the channel
+# stop_event is set to True, when you disable the account with aptbot -d "account_name"
+def start(bot: Bot, message: Message, stop_event: Event):
+    while not stop_event.is_set():
+        bot.send_message(message.channel, "Hello, world!")
+        time.sleep(120)
 
 
 def main(bot: Bot, message: Message):

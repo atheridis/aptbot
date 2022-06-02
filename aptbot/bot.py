@@ -80,7 +80,11 @@ class Bot(ABCBot):
 
     def leave_channel(self, channel: str):
         self._send_command(f"{Commands.PART.value} #{channel}")
-        self._connected_channels.remove(channel)
+        try:
+            self._connected_channels.remove(channel)
+        except KeyError as e:
+            logger.exception("Account isn't enabled")
+            logger.exception(e)
 
     def send_message(self, channel: str, text: Union[list[str], str], reply=None):
         if reply:

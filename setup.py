@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="aptbot",
-    version="0.2.0",
+    version="0.2.1",
     author="Georgios Atheridis",
     author_email="atheridis@tutamail.com",
     description="A chatbot for twitch.tv",
@@ -28,5 +28,5 @@ setuptools.setup(
         "python-dotenv",
         "urllib3",
     ],
-    python_requires=">=3.9",
+    python_requires=">=3.7",
 )
