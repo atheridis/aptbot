@@ -37,7 +37,7 @@ def add_account(s: socket.socket, acc: str):
     msg = ""
     try:
         s.send(bytes(f"{command}==={channel}==={msg}", "utf-8"))
-    except BrokenPipeError:
+    except (BrokenPipeError, OSError):
         pass
 
 
@@ -68,7 +68,7 @@ def disable_account(s: socket.socket, acc: str):
     msg = ""
     try:
         s.send(bytes(f"{command}==={channel}==={msg}", "utf-8"))
-    except BrokenPipeError:
+    except (BrokenPipeError, OSError):
         pass
 
 
