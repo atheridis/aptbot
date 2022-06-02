@@ -27,6 +27,7 @@ setuptools.setup(
     install_requires=[
         "python-dotenv",
         "urllib3",
+        "websocket-client",
     ],
     python_requires=">=3.9",
 )
