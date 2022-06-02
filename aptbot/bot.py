@@ -2,9 +2,10 @@ import logging
 import re
 import socket
 import time
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional, Union
+from typing import Iterable, Optional, Union
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,13 @@ class Message:
     value: str = ""
 
 
-class Bot:
+class ABCBot(ABC):
+    @abstractmethod
+    def send_message(self, channel: str, text: Union[list[str], str], reply=None):
+        pass
+
+
+class Bot(ABCBot):
     def __init__(self, nick: str, oauth_token: str):
         self._server = "irc.chat.twitch.tv"
         self._port = 6667
@@ -41,7 +48,7 @@ class Bot:
         self._oauth_token = oauth_token
         self._connected_channels = set()
 
-    def send_command(self, command: str):
+    def _send_command(self, command: str):
         if "PASS" not in command:
             logger.debug(f"< {command}")
         self._irc.send((command + "\r\n").encode())
@@ -49,25 +56,25 @@ class Bot:
     def connect(self):
         self._irc = socket.socket()
         self._irc.connect((self._server, self._port))
-        self.send_command(f"PASS oauth:{self._oauth_token}")
-        self.send_command(f"NICK {self._nick}")
-        self.send_command(
+        self._send_command(f"PASS oauth:{self._oauth_token}")
+        self._send_command(f"NICK {self._nick}")
+        self._send_command(
             f"CAP REQ :twitch.tv/membership twitch.tv/tags twitch.tv/commands"
         )
 
     def join_channel(self, channel: str):
-        self.send_command(f"{Commands.JOIN.value} #{channel}")
+        self._send_command(f"{Commands.JOIN.value} #{channel}")
         self._connected_channels.add(channel)
 
-    def join_channels(self, channels: set[str]):
+    def join_channels(self, channels: Iterable):
         for channel in channels:
             self.join_channel(channel)
 
     def leave_channel(self, channel: str):
-        self.send_command(f"{Commands.PART.value} #{channel}")
+        self._send_command(f"{Commands.PART.value} #{channel}")
         self._connected_channels.remove(channel)
 
-    def send_privmsg(self, channel: str, text: Union[list[str], str], reply=None):
+    def send_message(self, channel: str, text: Union[list[str], str], reply=None):
         if reply:
             replied_command = f"@reply-parent-msg-id={reply} "
         else:
@@ -75,10 +82,10 @@ class Bot:
         if isinstance(text, list):
             for t in text:
                 command = replied_command + f"{Commands.PRIVMSG.value} #{channel} :{t}"
-                self.send_command(command)
+                self._send_command(command)
         else:
             command = replied_command + f"{Commands.PRIVMSG.value} #{channel} :{text}"
-            self.send_command(command)
+            self._send_command(command)
 
     @staticmethod
     def _replace_escaped_space_in_tags(tag_value: str) -> str:
@@ -103,7 +110,7 @@ class Bot:
         return new_tag_value
 
     @staticmethod
-    def parse_message(received_msg: str) -> Message:
+    def _parse_message(received_msg: str) -> Message:
         split = re.search(
             r"(?:(?:@(.+))\s)?:(?:(?:(\w+)!\w+@\w+\.)?.+)\s(\w+)\s\#(\w+)\s:?(.+)?",
             received_msg,
@@ -139,11 +146,11 @@ class Bot:
     def _handle_message(self, received_msg: str) -> Message:
         logger.debug(received_msg)
         if received_msg == "PING :tmi.twitch.tv":
-            self.send_command("PONG :tmi.twitch.tv")
+            self._send_command("PONG :tmi.twitch.tv")
             return Message()
         elif not received_msg:
             return Message()
-        return Bot.parse_message(received_msg)
+        return Bot._parse_message(received_msg)
 
     def receive_messages(self) -> list[Message]:
         messages = []
@@ -169,3 +176,6 @@ class Bot:
         self.connect()
         self.join_channels(self._connected_channels)
         time.sleep(2)
+
+    # Aliasing method names for backwards compatibility
+    send_privmsg = send_message

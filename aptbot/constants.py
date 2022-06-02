@@ -11,6 +11,16 @@ elif os.name == "nt":
     if "APPDATA" in os.environ:
         CONFIG_PATH = os.path.join(os.environ["APPDATA"], "aptbot/accounts")
         CONFIG_LOGS = os.path.join(os.environ["APPDATA"], "aptbot/logs")
+    else:
+        print(
+            "APPDATA is not set, something must be very wrong.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+else:
+    print("Your OS is not supported", file=sys.stderr)
+    sys.exit(1)
+
 
 PORT = 26538
 LOCALHOST = "127.0.0.1"
@@ -33,7 +43,7 @@ LOGGING_DICT = {
         },
         "file": {
             "class": "logging.handlers.TimedRotatingFileHandler",
-            "level": "DEBUG",
+            "level": "INFO",
             "formatter": "simple",
             "filename": CONFIG_FILE,
             "when": "w0",

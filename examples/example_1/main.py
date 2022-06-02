@@ -1,4 +1,4 @@
-from aptbot.bot import Bot, Commands, Message
+from aptbot import Bot, Commands, Message
 
 
 def start(bot: Bot, message: Message):

@@ -1,4 +1,4 @@
-from aptbot.bot import Bot, Commands, Message
+from aptbot import Bot, Commands, Message
 
 
 def start(bot: Bot, message: Message):
@@ -15,7 +15,7 @@ def main(bot: Bot, message: Message):
         # but then the message sent back
         # will contain the name of the user in all lowercase
         if message.value.split()[0] == "!hello":
-            bot.send_privmsg(
+            bot.send_message(
                 message.channel,
                 f"hello {message.tags['display-name']}",
                 reply=message.tags["id"],

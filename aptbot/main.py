@@ -105,9 +105,7 @@ def initialize(bot: Bot):
         if os.path.isdir(os.path.join(CONFIG_PATH, c))
     ]
     channels = filter(lambda x: not x.startswith("."), channels)
-    for channel in channels:
-        if not channel.startswith("."):
-            bot.join_channel(channel)
+    bot.join_channels(channels)
 
 
 def listener():
@@ -152,7 +150,7 @@ def listener():
             if args_logic.BotCommands.JOIN.value in command:
                 bot.join_channel(channel)
             elif args_logic.BotCommands.SEND.value in command:
-                bot.send_privmsg(channel, msg)
+                bot.send_message(channel, msg)
             elif args_logic.BotCommands.KILL.value in command:
                 bot.disconnect()
                 c.close()
