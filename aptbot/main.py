@@ -15,7 +15,14 @@ from dotenv import load_dotenv
 from . import args_logic
 from .args import parse_arguments
 from .bot import Bot, Message
-from .constants import CONFIG_LOGS, CONFIG_PATH, LOCALHOST, LOGGING_DICT, PORT
+from .constants import (
+    CONFIG_LOGS,
+    CONFIG_PATH,
+    LOCALHOST,
+    LOGGING_DICT,
+    MAIN_FILE_NAME,
+    PORT,
+)
 
 logging.config.dictConfig(LOGGING_DICT)
 logger = logging.getLogger(__name__)
@@ -24,8 +31,9 @@ load_dotenv()
 
 
 def handle_message(bot: Bot, modules: dict[str, ModuleType]):
+    logger.debug("in handle_message thread")
     while True:
-        messages = bot.receive_messages()
+        messages = bot.get_messages()
         for message in messages:
             if not message.channel:
                 continue
@@ -76,15 +84,15 @@ def load_modules(modules: dict[str, ModuleType]):
     ]
     channels = filter(lambda x: not x.startswith("."), channels)
     for channel in channels:
-        account_path = os.path.join(CONFIG_PATH, f"{channel}")
+        account_path = os.path.join(CONFIG_PATH, channel)
         sys.path.append(account_path)
-        module_path = os.path.join(account_path, "main.py")
+        module_path = os.path.join(account_path, MAIN_FILE_NAME)
         spec = importlib.util.spec_from_file_location(
             "main",
             module_path,
         )
         if not spec or not spec.loader:
-            print("Problem loading spec")
+            logger.warning(f"Problem loading for {channel}")
             sys.path.remove(account_path)
             continue
         module = importlib.util.module_from_spec(spec)
@@ -99,6 +107,7 @@ def load_modules(modules: dict[str, ModuleType]):
 
 
 def initialize(bot: Bot):
+    logger.debug("Initializing...")
     channels = [
         c
         for c in os.listdir(CONFIG_PATH)
@@ -114,13 +123,15 @@ def listener():
     if NICK and OAUTH:
         bot = Bot(NICK, OAUTH)
     else:
-        print(
-            "Please set the environment variables:\nAPTBOT_NICK\nAPTBOT_PASS",
-            file=sys.stderr,
+        logger.error(
+            "The environment variables:\nAPTBOT_NICK\nAPTBOT_PASS\nare not set."
         )
         time.sleep(3)
         sys.exit(1)
-    bot.connect()
+    if not bot.connect():
+        logger.error("Twitch couldn't authenticate your credentials")
+        time.sleep(3)
+        sys.exit(1)
     modules = {}
     message_loop = Thread(
         target=start,
@@ -162,16 +173,6 @@ def listener():
                 bot.leave_channel(channel)
 
         time.sleep(1)
-
-
-def send(func):
-    def inner(*args, **kwargs):
-        s = socket.socket()
-        s.connect((LOCALHOST, PORT))
-        func(s, *args, **kwargs)
-        s.close()
-
-    return inner
 
 
 def main():

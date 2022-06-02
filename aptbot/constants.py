@@ -21,6 +21,8 @@ else:
     print("Your OS is not supported", file=sys.stderr)
     sys.exit(1)
 
+MAIN_FILE_NAME = "main.py"
+
 
 PORT = 26538
 LOCALHOST = "127.0.0.1"

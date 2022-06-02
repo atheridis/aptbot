@@ -1,6 +1,7 @@
 import logging
 import re
 import socket
+import sys
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -47,15 +48,22 @@ class Bot(ABCBot):
         self._nick = nick
         self._oauth_token = oauth_token
         self._connected_channels = set()
+        self._buffered_messages = []
 
     def _send_command(self, command: str):
         if "PASS" not in command:
-            logger.debug(f"< {command}")
+            logger.info(f"< {command}")
         self._irc.send((command + "\r\n").encode())
 
-    def connect(self):
+    def connect(self) -> bool:
+        self._connect()
+        connected = self._connected()
+        return connected
+
+    def _connect(self) -> None:
         self._irc = socket.socket()
         self._irc.connect((self._server, self._port))
+        logger.debug("Connecting...")
         self._send_command(f"PASS oauth:{self._oauth_token}")
         self._send_command(f"NICK {self._nick}")
         self._send_command(
@@ -112,7 +120,7 @@ class Bot(ABCBot):
     @staticmethod
     def _parse_message(received_msg: str) -> Message:
         split = re.search(
-            r"(?:(?:@(.+))\s)?:(?:(?:(\w+)!\w+@\w+\.)?.+)\s(\w+)\s\#(\w+)\s:?(.+)?",
+            r"(?:@(.+)\s)?:(?:(?:(\w+)!\w+@\w+\.)?.+)\s(\w+)\s(?:\#(\w+)|\*)\s:?(.+)?",
             received_msg,
         )
 
@@ -127,13 +135,16 @@ class Bot(ABCBot):
                     tag_value = Bot._replace_escaped_space_in_tags(tag.split("=")[1])
                 tags[tag_name] = " ".join(tag_value.split())
 
-        nick = split[2]
+        nick = split[2] if split[2] else ""
         try:
             command = Commands[split[3]]
         except KeyError:
             return Message()
-        channel = split[4]
-        value = " ".join(split[5].split())
+        channel = split[4] if split[4] else ""
+        try:
+            value = " ".join(split[5].split())
+        except AttributeError:
+            value = ""
 
         return Message(
             tags=tags,
@@ -144,7 +155,7 @@ class Bot(ABCBot):
         )
 
     def _handle_message(self, received_msg: str) -> Message:
-        logger.debug(received_msg)
+        logger.info(f"> {received_msg}")
         if received_msg == "PING :tmi.twitch.tv":
             self._send_command("PONG :tmi.twitch.tv")
             return Message()
@@ -152,9 +163,8 @@ class Bot(ABCBot):
             return Message()
         return Bot._parse_message(received_msg)
 
-    def receive_messages(self) -> list[Message]:
-        messages = []
-        while True:
+    def _receive_messages(self) -> bytes:
+        for _ in range(10):
             try:
                 received_msgs = self._irc.recv(2048)
             except ConnectionResetError as e:
@@ -163,17 +173,44 @@ class Bot(ABCBot):
                 self._restart_connection()
             else:
                 break
-        for received_msgs in received_msgs.decode("utf-8").split("\r\n"):
-            messages.append(self._handle_message(received_msgs))
+        else:
+            logger.error("Unable to connect to twitch. Exiting")
+            sys.exit(1)
+        return received_msgs
+
+    def _connected(self) -> bool:
+        received_msgs = self._receive_messages()
+        for received_msg in received_msgs.decode("utf-8").split("\r\n"):
+            self._buffered_messages.append(self._handle_message(received_msg))
+        if self._buffered_messages[0] == Message(
+            {},
+            "",
+            Commands.NOTICE,
+            "",
+            "Login authentication failed",
+        ):
+            logger.debug(f"Not connected")
+            return False
+        logger.debug(f"Connected")
+        return True
+
+    def get_messages(self) -> list[Message]:
+        messages = []
+        messages.extend(self._buffered_messages)
+        self._buffered_messages = []
+        received_msgs = self._receive_messages()
+        for received_msg in received_msgs.decode("utf-8").split("\r\n"):
+            messages.append(self._handle_message(received_msg))
         return messages
 
     def disconnect(self) -> None:
+        logger.debug("Disconnecting...")
         self._irc.close()
 
-    def _restart_connection(self) -> None:
+    def _restart_connection(self):
         self.disconnect()
         time.sleep(5)
-        self.connect()
+        self._connect()
         self.join_channels(self._connected_channels)
         time.sleep(2)
 

@@ -1,13 +1,14 @@
-import os
-import urllib3
 import json
-from datetime import datetime
-from typing import Optional, Union
+import os
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
-# from dotenv import load_dotenv
+from typing import Optional, Union
 
-# load_dotenv()
+import urllib3
+from dotenv import load_dotenv
+
+load_dotenv()
 
 NICK = os.getenv("APTBOT_NICK")
 OAUTH = os.getenv("APTBOT_OAUTH")
