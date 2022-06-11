@@ -100,14 +100,14 @@ class Bot(ABCBot):
             self._send_command(command)
 
     @staticmethod
-    def _replace_escaped_space_in_tags(tag_value: str) -> str:
+    def _replace_escaped_characters_in_tags(tag_value: str) -> str:
         new_tag_value = ""
         ignore_next = False
         for i in range(len(tag_value)):
             if ignore_next:
                 ignore_next = False
                 continue
-            if not tag_value[i] == "\\":
+            if tag_value[i] != "\\":
                 new_tag_value += tag_value[i]
                 ignore_next = False
                 continue
@@ -118,13 +118,15 @@ class Bot(ABCBot):
                 new_tag_value += "\\"
             elif tag_value[i + 1] == "s":
                 new_tag_value += " "
+            elif tag_value[i + 1] == ":":
+                new_tag_value += ";"
             ignore_next = True
         return new_tag_value
 
     @staticmethod
     def _parse_message(received_msg: str) -> Message:
         split = re.search(
-            r"(?:@(.+)\s)?:(?:(?:(\w+)!\w+@\w+\.)?.+)\s(\w+)\s(?:\#(\w+)|\*)\s:?(.+)?",
+            r"(?:@(.+)\s)?:(?:(?:(\w+)!\w+@\w+\.)?.+)\s(\w+)\s(?:\#(\w+)|\*)\s?:?(.+)?",
             received_msg,
         )
 
@@ -134,9 +136,12 @@ class Bot(ABCBot):
         tags = {}
         if split[1]:
             for tag in split[1].split(";"):
-                tag_name, tag_value = tag.split("=")
-                if tag.split("=")[0] == "reply-parent-msg-body":
-                    tag_value = Bot._replace_escaped_space_in_tags(tag.split("=")[1])
+                split_tag = tag.split("=")
+                tag_name = split_tag[0]
+                tag_value = "=".join(split_tag[1:])
+                if split_tag[0] == "reply-parent-msg-body":
+                    tag_value = Bot._replace_escaped_characters_in_tags(tag_value)
+                # Remove extra whitespace
                 tags[tag_name] = " ".join(tag_value.split())
 
         nick = split[2] if split[2] else ""
@@ -163,6 +168,9 @@ class Bot(ABCBot):
         if received_msg == "PING :tmi.twitch.tv":
             self._send_command("PONG :tmi.twitch.tv")
             return Message()
+        elif received_msg == ":tmi.twitch.tv RECONNECT":
+            logger.warning("Restarting twitch connection")
+            self._restart_connection()
         elif not received_msg:
             return Message()
         return Bot._parse_message(received_msg)
@@ -213,7 +221,7 @@ class Bot(ABCBot):
 
     def _restart_connection(self):
         self.disconnect()
-        time.sleep(5)
+        time.sleep(2)
         self._connect()
         self.join_channels(self._connected_channels)
         time.sleep(2)

@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="aptbot",
-    version="0.2.1",
+    version="0.2.2",
     author="Georgios Atheridis",
     author_email="atheridis@tutamail.com",
     description="A chatbot for twitch.tv",

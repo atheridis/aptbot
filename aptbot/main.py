@@ -16,8 +16,14 @@ from dotenv import load_dotenv
 from . import args_logic
 from .args import parse_arguments
 from .bot import Bot, Message
-from .constants import (CONFIG_LOGS, CONFIG_PATH, LOCALHOST, LOGGING_DICT,
-                        MAIN_FILE_NAME, PORT)
+from .constants import (
+    CONFIG_LOGS,
+    CONFIG_PATH,
+    LOCALHOST,
+    LOGGING_DICT,
+    MAIN_FILE_NAME,
+    PORT,
+)
 
 logging.config.dictConfig(LOGGING_DICT)
 logger = logging.getLogger(__name__)
@@ -181,6 +187,8 @@ def listener():
     )
     message_loop.start()
     s = socket.socket()
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    logger.debug("setsockopt")
     s.bind((LOCALHOST, PORT))
     s.listen(5)
 

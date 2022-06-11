@@ -1,4 +1,5 @@
 import os
+import sys
 
 if os.name == "posix":
     if "XDG_CONFIG_HOME" in os.environ and "XDG_CACHE_HOME" in os.environ:
@@ -39,7 +40,7 @@ LOGGING_DICT = {
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
-            "level": "DEBUG",
+            "level": "INFO",
             "formatter": "simple",
             "stream": "ext://sys.stdout",
         },

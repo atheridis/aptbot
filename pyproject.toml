@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aptbot"
-version = "0.2.1"
+version = "0.2.2"
 description = "A chatbot for twitch.tv"
 readme = "README.md"
 authors = [{ name = "Georgios Atheridis", email = "atheridis@tutamail.com" }]
