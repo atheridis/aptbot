@@ -49,6 +49,7 @@ class Bot(ABCBot):
         self._oauth_token = oauth_token
         self._connected_channels = set()
         self._buffered_messages = []
+        self.empty_message_count = 0
 
     def _send_command(self, command: str):
         if "PASS" not in command:
@@ -169,7 +170,6 @@ class Bot(ABCBot):
             self._send_command("PONG :tmi.twitch.tv")
             return Message()
         elif received_msg == ":tmi.twitch.tv RECONNECT":
-            logger.warning("Restarting twitch connection")
             self._restart_connection()
         elif not received_msg:
             return Message()
@@ -212,7 +212,20 @@ class Bot(ABCBot):
         self._buffered_messages = []
         received_msgs = self._receive_messages()
         for received_msg in received_msgs.decode("utf-8").split("\r\n"):
-            messages.append(self._handle_message(received_msg))
+            message = self._handle_message(received_msg)
+            messages.append(message)
+
+            # If twitch closes the connection,
+            # we get spammed by empty messages.
+            # So we restart the connection
+            if message == Message():
+                self.empty_message_count += 1
+            else:
+                self.empty_message_count = 0
+            if self.empty_message_count > 10:
+                self.empty_message_count = 0
+                self._restart_connection()
+                return messages
         return messages
 
     def disconnect(self) -> None:
@@ -220,6 +233,7 @@ class Bot(ABCBot):
         self._irc.close()
 
     def _restart_connection(self):
+        logger.warning("Restarting twitch connection")
         self.disconnect()
         time.sleep(2)
         self._connect()
