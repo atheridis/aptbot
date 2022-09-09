@@ -24,6 +24,8 @@ class Commands(Enum):
     PRIVMSG = "PRIVMSG"
     JOIN = "JOIN"
     PART = "PART"
+    PING = "PING"
+    PONG = "PONG"
 
 
 @dataclass
@@ -168,7 +170,7 @@ class Bot(ABCBot):
         logger.info(f"> {received_msg}")
         if received_msg == "PING :tmi.twitch.tv":
             self._send_command("PONG :tmi.twitch.tv")
-            return Message()
+            return Message(command=Commands.PING)
         elif received_msg == ":tmi.twitch.tv RECONNECT":
             self._restart_connection()
         elif not received_msg:
